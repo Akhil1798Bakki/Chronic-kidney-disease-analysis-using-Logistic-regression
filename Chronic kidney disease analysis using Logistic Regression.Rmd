@@ -1,0 +1,773 @@
+---
+title: "Chronic Kidney disease analysis using Logistic Regression"
+author: "Bakki Akhil"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+# Here we are analysing the Chronic kidney disease dataset
+# The problem statement in this dataset is
+# Finding the effect on chronic kidney disease when it is compared with all the other variables from the dataset
+# Here we are performing Logistic regression keeping dependent as class (Categorical variable) and all other variables as independent variables. The independent variables are Age, Blood pressure, Specific gravity, Albumin, Sugar, Red Blood cells, Pus cell, Pus cell chumps, Bacteria, Blood glucose random, Blood urea, Serum creatinine, Sodium, Potassium, Hemoglobin, Packed cell volume, white blood cell count, Red blood cell count, Hypertension, Diabetes Mellitus, Coronary artery disease, Appetite, Pedal Edema, Anemia
+
+# Below we are uploading the dataset
+```{r}
+
+data1 = read.csv("D:\\Akhil MBA\\MBA 4 Trimester\\Machine Learning Programming Using R\\CIA 2\\kidney_disease.csv", stringsAsFactors = TRUE)
+
+# removing unwanted columns
+data1 = data1[,-c(1)]
+
+# Converting the dependent variables into a proper format
+data1$classification = factor(data1$classification, levels = c(0,1), labels = c("Not Affected", "Affected"))
+
+
+
+View(data1)
+str(data1)
+summary(data1)
+
+
+```
+# Checking the presence of null values in whole dataset
+# The below code says there are 470 null values
+```{r}
+sum(is.na(data1))
+
+```
+
+# Before analysing the data we are checking the presence of missing values in the varaibles
+# Finding the null values in each dataset
+```{r}
+sapply(data1, function(x) sum(is.na(x)))
+
+```
+
+# Replacing thes null values with their means for better operation
+# The below code replaces all the null values with the mean occurances in the dataset
+```{r}
+
+for(i in 1:ncol(data1)){
+  data1[is.na(data1[,i]), i] <- mean(data1[,i], na.rm = TRUE)
+}
+
+```
+
+
+# Checking the presence of null values graphically
+```{r}
+library(Amelia)
+missmap(data1, main = "Missing Values vs. Observed")
+
+```
+# Visualizing all the variables in the dataset
+# Visualizing dependent variables
+```{r}
+
+library(ggplot2)
+
+#Analysing Classification dependent variable
+ggplot(data1, aes(data1$classification))+geom_bar()
+
+
+
+```
+
+# Below we shall visualize the independent variable
+```{r}
+
+library(ggplot2)
+
+#Analysing age variable
+ggplot(data1, aes(data1$age))+geom_histogram()
+
+#Analysing Blood pressure variable
+ggplot(data1, aes(data1$bp))+geom_histogram(binwidth = 9)
+
+# Analysing Specific gravity variable
+ggplot(data1, aes(data1$sg))+geom_bar()
+
+# Analysing Albumin variable
+ggplot(data1, aes(data1$al))+geom_histogram()
+
+# Analysing Sugar variable
+ggplot(data1, aes(data1$su))+geom_histogram()
+
+# Analysing Red blood cells variable
+ggplot(data1, aes(data1$rbc))+geom_bar()
+
+# Analysing Pus cells variable
+ggplot(data1, aes(data1$pc))+geom_bar()
+
+# Analysing Pus cells clumps variable
+ggplot(data1, aes(data1$pcc))+geom_bar()
+
+# Analysing Bacteria variable
+ggplot(data1, aes(data1$ba))+geom_bar()
+
+# Analysing Blood Glucose random variable
+ggplot(data1, aes(data1$bgr))+geom_histogram(binwidth = 10)
+
+# Analysing Blood Urea variable
+ggplot(data1, aes(data1$bu))+geom_histogram()
+
+# Analysing Serum Creatinine variable
+ggplot(data1, aes(data1$sc))+geom_histogram(binwidth = 5)
+
+# Analysing Sodium variable
+ggplot(data1, aes(data1$sod))+geom_histogram(binwidth = 9)
+
+# Analysing Potassium variable
+ggplot(data1, aes(data1$pot))+geom_histogram(binwidth = 1)
+
+# Analysing Hemoglobin variable
+ggplot(data1, aes(data1$hemo))+geom_histogram()
+
+# Analysing Packed cell volume variable
+ggplot(data1, aes(data1$pcv))+geom_bar()
+
+# Analysing White blood cells count variable
+ggplot(data1, aes(data1$wc))+geom_bar()
+
+# Analysing Red Blood cells count variable
+ggplot(data1, aes(data1$rc))+geom_bar()
+
+
+# Analysing Hypertension variable
+ggplot(data1, aes(data1$htn))+geom_bar()
+
+# Analysing Diabetes Mellitus variable
+ggplot(data1, aes(data1$dm))+geom_bar()
+
+# Analysing Coronary Artery disease variable
+ggplot(data1, aes(data1$cad))+geom_bar()
+
+# Analysing Appetite variable
+ggplot(data1, aes(data1$appet))+geom_bar()
+
+# Analysing Pedal Edema variable
+ggplot(data1, aes(data1$pe))+geom_bar()
+
+# Analysing Anemia variable
+ggplot(data1, aes(data1$ane))+geom_bar()
+
+
+```
+
+# Problem statement - Building a Logistic Regression model on dependent variable Classification (classifying between chronic kidney disease patient and non chronic kidney disease patient) and 24 independent variable age, blood Urea, Specific gravity, Albumin, Sugar, Red blood cells, Pus cells, Pus cells clumps, Bacteria, Blood Glucose random, Blood Urea, Serum Creatinine,  sodium,  Potassium, hemoglobin, Packed cell volume, White blood cells count, Red blood cells count, Hypertension, Diabetes Mellitus, Coronary Arteey disease, Appetite, Pedal Edema, Anemia and esstimating their relationship
+
+# Here we are selecting the variables according to the problem statement
+
+# Dividing the data into train and test data format by keeping 70% as split ratio
+
+```{r}
+library(caTools)
+set.seed(100)
+split1 = sample.split(data1$classification, SplitRatio = 0.70)
+
+datatrain = subset(data1, split1 == TRUE)
+datatest = subset(data1, split1 == FALSE)
+
+dim(datatrain)
+dim(datatest)
+
+
+
+
+```
+
+# Below we are building Logistic regression between the dependent variable Classification and all other independent variables in the dataset
+
+# From the below output we can see that there is a greate difference between Null deviance and Residual deviance indicating the model is good model
+# We also see that the model has Lower AIC value specifing the goodness of the model
+# The model build is 96% accurate in predicting or classifying between Chronic kidney disease Effected and Not Effected patients
+# The value of Kappa 0.92 indicates that the model is almost perfect model
+
+```{r}
+library(blorr)
+library(ISLR)
+library(caret)
+
+lreg1 = train(classification~.,
+              method = "glm",
+              family = "binomial",
+              data = datatrain)
+
+lreg1
+summary(lreg1)
+summary(lreg1$finalModel)
+
+```
+# before going to final model we need to check model fit
+# Finding the model fit
+
+# The below output shows the likelihood ratio as 370 specifying the goodness of fit for the model
+# As the MacFadden's R2 is 1 which specifies that the model is good model for predicting or classifying between Chronic kidney disease patient and non chronic kidney disease patient
+# Here we can also observe that the model has low AIC value that is 60 
+```{r}
+library(blorr)
+library(Rcpp)
+
+blr_model_fit_stats(lreg1$finalModel)
+
+
+```
+
+# for further analysis we use hosmer lemeshow test
+# null hypothesis: model is good fit: resulting accepting the model
+# Alternate hypothesis: model is not good fit
+
+# As here from the output the p-value is greater that 0.05 resulting in accepting the null hypothesis resulting that the model is good fit model
+
+```{r}
+blr_test_hosmer_lemeshow(lreg1$finalModel)
+
+```
+
+# Building a confusion matrix
+
+# Here from the below output we can see that the model has high sensitivity and high specificity
+# The model also has high Accuracy in predicting/classifying the chronic kidney disease patients
+```{r}
+
+blr_confusion_matrix(lreg1$finalModel, cutoff = 0.5)
+
+```
+
+# Here below we will be finding the fitted values of the coefficients
+```{r}
+
+lreg1$finalModel$fitted.values
+
+```
+# Here below we are building predict function and comparing it with test data varibales
+# Here below we are building Confusion Matrix for getting predicted accuracy on test data
+
+# The output of this shows that it has
+# high Accuracy (95%), high Kappa value (89%), high Sensitivity (100%), high Specificity (92%) in predicting/classifying the chronic kidney disease patients
+```{r}
+
+library(blorr)
+predict1 = predict(lreg1, datatest)
+predict1
+confusionMatrix(predict1, datatest$classification)
+
+
+```
+
+
+# Building an ROC curve for the dependent variable (classification)
+# Here the ROC Curve specifies the model fit indices
+# From the below graph output we can say that the independent variables has effect in dependent variable and the model if good fit model
+```{r}
+
+gaintable = blr_gains_table(lreg1$finalModel)
+blr_roc_curve(gaintable)
+
+
+```
+
+# Below we will perform Step wise AIC in bith directions (that is forward direction and backward direction)
+# from the output we are rounding off to only six varibales those are Hemoglobin, Specific gravity, Diabetes Mellitus, Albumin, Pedal Edema, Packed cell volume that has effect on dependent variable classification
+```{r}
+
+library(blorr)
+
+lregboth = blr_step_aic_both(lreg1$finalModel, details = TRUE) 
+plot(lregboth)
+
+
+```
+
+# For more analysis between dependent variable classification and independent variables we are performing tests like cross tabulation, chi square test, t-test
+# Performing Cross tabulation and chi square test between dependent variable and independent categorical variable
+
+# The below code shows that relatioinship of dependencies between indepedent variable Anemia and dependent variable classification
+# from the below code we can say that there is variation of dependent variable classification by Anemia variable, as affect of chronic kidney disease due to Anemia is of count 175 people
+
+# Here from chi square test as p-value<0.05 we reject null hypothesis saying that there is a relaitonship between independent and dependent variable
+```{r}
+
+xtabs(~ classification + ane, data= datatrain)
+
+tab1 = table(datatrain$classification, datatrain$ane)
+tab1
+chisq.test(tab1, correct = TRUE)
+
+```
+
+# The below code shows that relatioinship of dependencies between indepedent variable Pedal Edema and dependent variable classification
+# from the below code we can say that there is variation of dependent variable classification by Pedal adema variable, as affect of chronic kidney disease due to Pedal adema is of count 175 people
+
+# Here from chi square test as p-value<0.05 we reject null hypothesis saying that there is a relaitonship between independent and dependent variable
+```{r}
+
+xtabs(~ classification + pe, data= datatrain)
+
+tab2 = table(datatrain$classification, datatrain$pe)
+tab2
+chisq.test(tab2, correct = TRUE)
+
+```
+
+# The below code shows that relatioinship of dependencies between indepedent variable Appetite and dependent variable classification
+# from the below code we can say that there is a variation of dependent variable classification by Appetite variable, as affect of chronic kidney disease due to Pedal adema is of count 175 people
+
+# Here from chi square test as p-value<0.05 we reject null hypothesis saying that there is a relaitonship between independent and dependent variable
+```{r}
+
+xtabs(~ classification + appet, data= datatrain)
+
+tab3 = table(datatrain$classification, datatrain$appet)
+tab3
+chisq.test(tab3, correct = TRUE)
+
+
+```
+
+# The below code shows that relatioinship of dependencies between indepedent variable Coronary Artery disease and dependent variable classification
+# from the below code we can say that there is a variation of dependent variable classification by Coronary Artery disease variable, as affect of chronic kidney disease due to Coronary Artery disease is of count 175 people
+
+# Here from chi square test as p-value<0.05 we reject null hypothesis saying that there is a relaitonship between independent and dependent variable
+```{r}
+
+xtabs(~ classification + cad, data= datatrain)
+
+tab4 = table(datatrain$classification, datatrain$cad)
+tab4
+chisq.test(tab4, correct = TRUE)
+
+
+```
+
+# The below code shows that relatioinship of dependencies between indepedent variable Diabetes Mellitus disease and dependent variable classification
+# from the below code we can say that there is a variation of dependent variable classification by Diabetes Mellitus variable, as affect of chronic kidney disease due to Diabetes Milletus is of count 175 people
+
+# Here from chi square test as p-value<0.05 we reject null hypothesis saying that there is a relaitonship between independent and dependent variable
+```{r}
+
+xtabs(~ classification + dm, data= datatrain)
+
+tab5 = table(datatrain$classification, datatrain$dm)
+tab5
+chisq.test(tab5, correct = TRUE)
+
+
+```
+
+# The below code shows that relatioinship of dependencies between indepedent variable Hypertension disease and dependent variable classification
+# from the below code we can say that there is a variation of dependent variable classification by Hypertension variable, as affect of chronic kidney disease due to Hypertension is of count 175 people
+
+# Here from chi square test as p-value<0.05 we reject null hypothesis saying that there is a relaitonship between independent and dependent variable
+```{r}
+
+xtabs(~ classification + htn, data= datatrain)
+
+tab6 = table(datatrain$classification, datatrain$htn)
+tab6
+chisq.test(tab6, correct = TRUE)
+
+
+```
+
+# The below code shows that relatioinship of dependencies between indepedent variable Bacteria disease and dependent variable classification
+# from the below code we can say that there is a variation of dependent variable classification by Bacteria variable, as affect of chronic kidney disease due to Bacteria is of count 175 people
+
+# Here from chi square test as p-value>0.05 we accepting null hypothesis saying that there is no relaitonship between independent and dependent variable
+```{r}
+
+xtabs(~ classification + ba, data= datatrain)
+
+tab7 = table(datatrain$classification, datatrain$ba)
+tab7
+chisq.test(tab7, correct = TRUE)
+
+
+```
+
+# The below code shows that relatioinship of dependencies between indepedent variable Pus cell clumps disease and dependent variable classification
+# from the below code we can say that there is a variation of dependent variable classification by Pus cell clumps variable, as affect of chronic kidney disease due to Pus cell clumps is of count 175 people
+
+# Here from chi square test as p-value<0.05 we rejecting null hypothesis saying that there is a relaitonship between independent and dependent variable
+```{r}
+
+xtabs(~ classification + pcc, data= datatrain)
+
+tab8 = table(datatrain$classification, datatrain$pcc)
+tab8
+chisq.test(tab8, correct = TRUE)
+
+
+```
+
+# The below code shows that relatioinship of dependencies between indepedent variable Pus cell disease and dependent variable classification
+# from the below code we can say that there is a variation of dependent variable classification by Pus cell variable, as affect of chronic kidney disease due to Pus cell is of count 175 people
+
+# Here from chi square test as p-value>0.05 we accepting null hypothesis saying that there is no relaitonship between independent and dependent variable
+```{r}
+
+xtabs(~ classification + pc, data= datatrain)
+
+tab9 = table(datatrain$classification, datatrain$pc)
+tab9
+chisq.test(tab9, correct = TRUE)
+
+
+```
+
+# The below code shows that relatioinship of dependencies between indepedent variable Red blood cells disease and dependent variable classification
+# from the below code we can say that there is a variation of dependent variable classification by Red blood cells variable, as affect of chronic kidney disease due to Red blood cells is of count 175 people
+
+# Here from chi square test as p-value>0.05 we accepting null hypothesis saying that there is no relaitonship between independent and dependent variable
+```{r}
+
+xtabs(~ classification + rbc, data= datatrain)
+
+tab10 = table(datatrain$classification, datatrain$rbc)
+tab10
+chisq.test(tab10, correct = TRUE)
+
+
+```
+
+# Here we are performing t-test for comparing the relationship between Categorical dependent variable and scalar independent variable for finding the perfect columns to be considered
+
+# Here we are comparing dependent variable classification (categorical) with independent variable age (scalar)
+# Ho: mu(Affected) = mu (Not Affected)
+# H1: mu(Affected) != mu (Not Affected)
+# Here from the below output as p-value<0.05 we are rejecting null hypothesis
+```{r}
+
+t.test(datatrain$age~datatrain$classification)
+
+```
+
+# Here we are comparing dependent variable classification (categorical) with independent variable Specific Gravity (scalar)
+# Ho: mu(Affected) = mu (Not Affected)
+# H1: mu(Affected) != mu (Not Affected)
+# Here from the below output as p-value<0.05 we are rejecting null hypothesis
+```{r}
+t.test(datatrain$sg~datatrain$classification)
+
+```
+
+# Here we are comparing dependent variable classification (categorical) with independent variable Blood pressure (scalar)
+# Ho: mu(Affected) = mu (Not Affected)
+# H1: mu(Affected) != mu (Not Affected)
+# Here from the below output as p-value<0.05 we are rejecting null hypothesis
+```{r}
+
+t.test(datatrain$bp~datatrain$classification)
+
+```
+
+# Here we are comparing dependent variable classification (categorical) with independent variable Albumin (scalar)
+# Ho: mu(Affected) = mu (Not Affected)
+# H1: mu(Affected) != mu (Not Affected)
+# Here from the below output as p-value<0.05 we are rejecting null hypothesis
+```{r}
+
+t.test(datatrain$al~datatrain$classification)
+
+```
+
+# Here we are comparing dependent variable classification (categorical) with independent variable Sugar (scalar)
+# Ho: mu(Affected) = mu (Not Affected)
+# H1: mu(Affected) != mu (Not Affected)
+# Here from the below output as p-value<0.05 we are rejecting null hypothesis
+```{r}
+
+t.test(datatrain$su~datatrain$classification)
+
+```
+
+# Here we are comparing dependent variable classification (categorical) with independent variable Blood glucose random (scalar)
+# Ho: mu(Affected) = mu (Not Affected)
+# H1: mu(Affected) != mu (Not Affected)
+# Here from the below output as p-value<0.05 we are rejecting null hypothesis
+```{r}
+
+t.test(datatrain$bgr~datatrain$classification)
+
+```
+
+# Here we are comparing dependent variable classification (categorical) with independent variable Blood Urea (scalar)
+# Ho: mu(Affected) = mu (Not Affected)
+# H1: mu(Affected) != mu (Not Affected)
+# Here from the below output as p-value<0.05 we are rejecting null hypothesis
+```{r}
+
+t.test(datatrain$bu~datatrain$classification)
+
+```
+
+# Here we are comparing dependent variable classification (categorical) with independent variable Serum creatinine (scalar)
+# Ho: mu(Affected) = mu (Not Affected)
+# H1: mu(Affected) != mu (Not Affected)
+# Here from the below output as p-value<0.05 we are rejecting null hypothesis
+```{r}
+t.test(datatrain$sc~datatrain$classification)
+
+```
+
+# Here we are comparing dependent variable classification (categorical) with independent variable Sodium (scalar)
+# Ho: mu(Affected) = mu (Not Affected)
+# H1: mu(Affected) != mu (Not Affected)
+# Here from the below output as p-value<0.05 we are rejecting null hypothesis
+```{r}
+
+t.test(datatrain$sod~datatrain$classification)
+
+```
+
+# Here we are comparing dependent variable classification (categorical) with independent variable Potassium (scalar)
+# Ho: mu(Affected) = mu (Not Affected)
+# H1: mu(Affected) != mu (Not Affected)
+# Here from the below output as p-value>0.05 we are Accepting null hypothesis
+```{r}
+
+t.test(datatrain$pot~datatrain$classification)
+
+```
+
+# Here we are comparing dependent variable classification (categorical) with independent variable Hemoglobin (scalar)
+# Ho: mu(Affected) = mu (Not Affected)
+# H1: mu(Affected) != mu (Not Affected)
+# Here from the below output as p-value<0.05 we are rejecting null hypothesis
+```{r}
+
+t.test(datatrain$hemo~datatrain$classification)
+
+```
+
+# Here we are comparing dependent variable classification (categorical) with independent variable Packed cell volume (scalar)
+# Ho: mu(Affected) = mu (Not Affected)
+# H1: mu(Affected) != mu (Not Affected)
+# Here from the below output as p-value<0.05 we are rejecting null hypothesis
+```{r}
+
+t.test(datatrain$pcv~datatrain$classification)
+
+```
+
+# Here we are comparing dependent variable classification (categorical) with independent variable White blood cells count (scalar)
+# Ho: mu(Affected) = mu (Not Affected)
+# H1: mu(Affected) != mu (Not Affected)
+# Here from the below output as p-value<0.05 we are rejecting null hypothesis
+```{r}
+
+t.test(datatrain$wc~datatrain$classification)
+
+```
+
+# Here we are comparing dependent variable classification (categorical) with independent variable red blood cells count (scalar)
+# Ho: mu(Affected) = mu (Not Affected)
+# H1: mu(Affected) != mu (Not Affected)
+# Here from the below output as p-value<0.05 we are rejecting null hypothesis
+```{r}
+
+t.test(datatrain$rc~datatrain$classification)
+
+```
+
+
+# From above calculation of Step-AIC, cross tabulations, chi-square test, t-test between each categorical, scalar independent variable when compared with dependent variable we can say that there is a constant count of effect on dependent variable when comprared with independent variable
+
+# Here after calculating chi square between the categorical variables and compared it with dependent variable we can say that there are few variables like Red blood cells, Pus Cells, Bacteria which accepts null hypothesis saying that there is no effect of these varaibles in dependent varaible.
+# Here after performing t-xtest on Categorical dependent variable with all other scalar independent variables we came to know that potassium variable has no Significant relationship on the Classification (dependent variable)
+# After performing Step AIC both direction we got to know that the dependent variable is effected only by six independent variables those are being Hemoglobin, Specific gravity, Diabetes Mellitus, Albumin, Pedal Edema, Packed cell volume.
+
+# Here we are considering only the six columns those are Hemoglobin, Specific gravity, Diabetes Mellitus, Albumin, Pedal Edema, Packed cell volume  and performing regression for better output
+
+# We will be performing Logistic regression to this new dataset
+
+# From the below output we can see that there is a greate difference between Null deviance and Residual deviance indicating the model is good model
+# We also see that the model has Lower AIC = 22 value specifing the goodness of the model
+# The model build is 97% accurate in predicting or classifying between Chronic kidney disease Effected and Not Effected patients
+# The value of Kappa 0.93 indicates that the model is almost perfect model
+
+
+```{r}
+
+library(blorr)
+library(ISLR)
+library(caret)
+
+#lreg1 = glm(datatrain$classification~. ,family = "binomial",data = datatrain)
+
+lreg2 = train(classification~ 
+                sg+
+                al+
+                hemo+
+                pcv+
+                dm+
+                pe,
+              method = "glm",
+              family = "binomial",
+              data = datatrain)
+
+lreg2
+summary(lreg2)
+summary(lreg2$finalModel)
+
+
+```
+
+# before going to final model we need to check model fit
+# Finding the model fit
+
+# The below output shows the likelihood ration as 370 specifying the goodness of fit for the model
+# As the MacFadden's R2 is 1 which specifies that the model is good model for predicting or classifying between Chronic kidney disease patient and non chronic kidney disease patient
+# Here we can also observe that the model has low AIC value that is 22 
+```{r}
+library(blorr)
+library(Rcpp)
+
+blr_model_fit_stats(lreg2$finalModel)
+
+
+```
+
+# for further analysis we use hosmer lemeshow test
+# null hypothesis: model is good fit: 
+# Alternate hypothesis: model is not good fit:
+
+# As here from the output the p-value is greater that 0.05 resulting in accepting the null hypothesis resulting that the model is good fit model
+```{r}
+blr_test_hosmer_lemeshow(lreg2$finalModel)
+
+```
+
+# Building a confusion matrix
+
+# Here from the below output we can see that the model has high sensitivity and high specificity
+# The model also has high Accuracy in predicting/classifying the chronic kidney disease patients
+```{r}
+
+blr_confusion_matrix(lreg2$finalModel, cutoff = 0.5)
+
+```
+
+# Here below we are building predict function and comparing it with test data varibales
+# Here below we are building Confusion Matrix for getting predicted accuracy on test data
+
+# The output of this shows that it has
+# high Accuracy (95%), high Kappa value (89%), high Sensitivity (100%), high Specificity (92%) in predicting/classifying the chronic kidney disease patients
+```{r}
+
+library(blorr)
+predict2 = predict(lreg2, datatest)
+predict2
+confusionMatrix(predict2, datatest$classification)
+
+
+```
+
+# Building an ROC curve for the dependent variable (classification)
+# Here the ROC Curve specifies the model fit indices
+# From the below graph output we can say that the independent variables has effect in dependent variable and the model if good fit model
+```{r}
+
+gaintable = blr_gains_table(lreg2$finalModel)
+blr_roc_curve(gaintable)
+
+
+```
+
+# Below we will perform Step wise AIC in both directions (that is forward direction and backward direction)
+# from the output we are rounding off to only six varibales those are Hemoglobin, Specific gravity, Diabetes Mellitus, Albumin, Pedal Edema, Packed cell volume that has effect on dependent variable classification
+```{r}
+
+library(blorr)
+
+lregboth = blr_step_aic_both(lreg2$finalModel, details = TRUE)
+plot(lregboth)
+
+```
+
+# Conclusion
+# Here we have performed Logistic regression for classifying/predicting the chronic kidney disease patients
+# Here we have analysed with sensitvity, specificity and AIC values which has shown that the model is good fit model when we have performed logistic regression between Classsification dependent variable and all other 24 independent variables
+
+# For checking the actual effect of independent variables on dependent varaibel we have performed test like Chi-square, t-test, step-AIC test between variables.
+# For doing the above test we have divided the data as 50% by using Receiver Operating Characteristic (ROC) curve
+# After performing these tests we found out that dependent variable is effected mostly by 6 independent varibles those are Hemoglobin, Specific gravity, Diabetes Mellitus, Albumin, Pedal Edema, Packed cell volume.
+# We have checked the effect of these six variables on dependent variable by doing various test and found out the model build by using these six variables is good model and has perfect effect on dependent variable
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
